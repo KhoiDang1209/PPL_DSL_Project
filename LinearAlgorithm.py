@@ -23,7 +23,6 @@ class LinearAlgebraParser:
 
     @staticmethod
     def solve_linear_system(coefficients, constants):
-
         try:
             if not LinearAlgebraParser._validate_matrix(coefficients):
                 return "Error: Invalid coefficient matrix"
@@ -120,7 +119,6 @@ class LinearAlgebraParser:
 
     @staticmethod
     def compute_eigenvalues_vectors(matrix):
-
         try:
             if not LinearAlgebraParser._validate_matrix(matrix):
                 return "Error: Invalid matrix"
@@ -149,7 +147,151 @@ class LinearAlgebraParser:
         except Exception as e:
             return f"Error computing eigenvalues/vectors: {str(e)}"
 
-    def parse_linear_algebra(self, operation, matrix=None, constants=None):
+    @staticmethod
+    def add_matrices(matrix1, matrix2):
+        try:
+            if not LinearAlgebraParser._validate_matrix(matrix1) or not LinearAlgebraParser._validate_matrix(matrix2):
+                return "Error: Invalid matrix input"
+            if len(matrix1) != len(matrix2) or len(matrix1[0]) != len(matrix2[0]):
+                return "Error: Matrices must have the same dimensions"
+
+            A = LinearAlgebraParser._to_sympy_matrix(matrix1)
+            B = LinearAlgebraParser._to_sympy_matrix(matrix2)
+            if A is None or B is None:
+                return "Error: Invalid matrix input"
+
+            steps = ["Step 1: Input matrices:"]
+            steps.append(f"Matrix A:\n{A}")
+            steps.append(f"Matrix B:\n{B}")
+
+            result = A + B
+            steps.append("Step 2: Add matrices:")
+            steps.append(f"Result:\n{result}")
+
+            return "\n".join(steps)
+        except Exception as e:
+            return f"Error adding matrices: {str(e)}"
+
+    @staticmethod
+    def subtract_matrices(matrix1, matrix2):
+        try:
+            if not LinearAlgebraParser._validate_matrix(matrix1) or not LinearAlgebraParser._validate_matrix(matrix2):
+                return "Error: Invalid matrix input"
+            if len(matrix1) != len(matrix2) or len(matrix1[0]) != len(matrix2[0]):
+                return "Error: Matrices must have the same dimensions"
+
+            A = LinearAlgebraParser._to_sympy_matrix(matrix1)
+            B = LinearAlgebraParser._to_sympy_matrix(matrix2)
+            if A is None or B is None:
+                return "Error: Invalid matrix input"
+
+            steps = ["Step 1: Input matrices:"]
+            steps.append(f"Matrix A:\n{A}")
+            steps.append(f"Matrix B:\n{B}")
+
+            result = A - B
+            steps.append("Step 2: Subtract matrices:")
+            steps.append(f"Result:\n{result}")
+
+            return "\n".join(steps)
+        except Exception as e:
+            return f"Error subtracting matrices: {str(e)}"
+
+    @staticmethod
+    def multiply_matrices(matrix1, matrix2):
+        try:
+            if not LinearAlgebraParser._validate_matrix(matrix1) or not LinearAlgebraParser._validate_matrix(matrix2):
+                return "Error: Invalid matrix input"
+            if len(matrix1[0]) != len(matrix2):
+                return "Error: Number of columns in first matrix must equal number of rows in second matrix"
+
+            A = LinearAlgebraParser._to_sympy_matrix(matrix1)
+            B = LinearAlgebraParser._to_sympy_matrix(matrix2)
+            if A is None or B is None:
+                return "Error: Invalid matrix input"
+
+            steps = ["Step 1: Input matrices:"]
+            steps.append(f"Matrix A:\n{A}")
+            steps.append(f"Matrix B:\n{B}")
+
+            result = A * B
+            steps.append("Step 2: Multiply matrices:")
+            steps.append(f"Result:\n{result}")
+
+            return "\n".join(steps)
+        except Exception as e:
+            return f"Error multiplying matrices: {str(e)}"
+
+    @staticmethod
+    def divide_matrices(matrix1, matrix2):
+        try:
+            if not LinearAlgebraParser._validate_matrix(matrix1) or not LinearAlgebraParser._validate_matrix(matrix2):
+                return "Error: Invalid matrix input"
+            if len(matrix2) != len(matrix2[0]):
+                return "Error: Second matrix must be square"
+            if len(matrix1[0]) != len(matrix2):
+                return "Error: Number of columns in first matrix must equal number of rows in second matrix"
+
+            A = LinearAlgebraParser._to_sympy_matrix(matrix1)
+            B = LinearAlgebraParser._to_sympy_matrix(matrix2)
+            if A is None or B is None:
+                return "Error: Invalid matrix input"
+
+            steps = ["Step 1: Input matrices:"]
+            steps.append(f"Matrix A:\n{A}")
+            steps.append(f"Matrix B:\n{B}")
+
+            det = B.det()
+            steps.append("Step 2: Compute determinant of B:")
+            steps.append(f"Determinant = {det}")
+            if det == 0:
+                steps.append("Step 3: Second matrix is not invertible (determinant is zero)")
+                return "\n".join(steps)
+
+            B_inv = B.inv()
+            steps.append("Step 3: Compute inverse of B:")
+            steps.append(f"Inverse of B:\n{B_inv}")
+
+            result = A * B_inv
+            steps.append("Step 4: Multiply A by inverse of B:")
+            steps.append(f"Result:\n{result}")
+
+            return "\n".join(steps)
+        except Exception as e:
+            return f"Error dividing matrices: {str(e)}"
+
+    @staticmethod
+    def diagonalize_matrix(matrix):
+
+        try:
+            if not LinearAlgebraParser._validate_matrix(matrix):
+                return "Error: Invalid matrix"
+            if len(matrix) != len(matrix[0]):
+                return "Error: Matrix must be square"
+
+            A = LinearAlgebraParser._to_sympy_matrix(matrix)
+            if A is None:
+                return "Error: Invalid matrix input"
+
+            steps = ["Step 1: Input matrix:"]
+            steps.append(str(A))
+
+            try:
+                P, D = A.diagonalize()
+                steps.append("Step 2: Compute diagonalization:")
+                steps.append(f"Matrix P (eigenvectors):\n{P}")
+                steps.append(f"Diagonal matrix D (eigenvalues):\n{D}")
+                steps.append("Verification: A = P * D * P^(-1)")
+                steps.append(f"P^(-1):\n{P.inv()}")
+            except sp.MatrixError:
+                steps.append("Step 2: Matrix is not diagonalizable")
+                return "\n".join(steps)
+
+            return "\n".join(steps)
+        except Exception as e:
+            return f"Error diagonalizing matrix: {str(e)}"
+
+    def parse_linear_algebra(self, operation, matrix=None, matrix2=None, constants=None):
         try:
             if operation == "Solve Linear System":
                 if matrix is None or constants is None:
@@ -167,6 +309,26 @@ class LinearAlgebraParser:
                 if matrix is None:
                     return "Error: Matrix required for eigenvalues/vectors"
                 return self.compute_eigenvalues_vectors(matrix)
+            elif operation == "Add Matrices":
+                if matrix is None or matrix2 is None:
+                    return "Error: Two matrices required for addition"
+                return self.add_matrices(matrix, matrix2)
+            elif operation == "Subtract Matrices":
+                if matrix is None or matrix2 is None:
+                    return "Error: Two matrices required for subtraction"
+                return self.subtract_matrices(matrix, matrix2)
+            elif operation == "Multiply Matrices":
+                if matrix is None or matrix2 is None:
+                    return "Error: Two matrices required for multiplication"
+                return self.multiply_matrices(matrix, matrix2)
+            elif operation == "Divide Matrices":
+                if matrix is None or matrix2 is None:
+                    return "Error: Two matrices required for division"
+                return self.divide_matrices(matrix, matrix2)
+            elif operation == "Diagonalize":
+                if matrix is None:
+                    return "Error: Matrix required for diagonalization"
+                return self.diagonalize_matrix(matrix)
             else:
                 return "Unsupported linear algebra operation"
         except Exception as e:
