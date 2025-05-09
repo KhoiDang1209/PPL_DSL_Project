@@ -1,7 +1,7 @@
 # CalculusAlgorithm.py
 import sympy as sp
 import numpy as np
-
+from tabulate import tabulate
 class CalculusParser:
     @staticmethod
     def _validate_variable(function_str, variable):
@@ -97,60 +97,73 @@ class CalculusParser:
         try:
             if not CalculusParser._validate_variable(function_str, variable):
                 return f"Error: Variable '{variable}' not found in function '{function_str}'"
-            
+
             var = sp.Symbol(variable)
             func = sp.sympify(function_str)
             derivative = sp.diff(func, var)
-            
+
             # Find critical points (where derivative = 0 or undefined)
             critical_points = sp.solve(derivative, var)
             critical_points = [float(pt) for pt in critical_points if pt.is_real]
             critical_points.sort()
-            
+
             # Include domain boundaries (e.g., -∞, +∞) and critical points
             points = [-float('inf')] + critical_points + [float('inf')]
-            
+
             # Analyze behavior in each interval
-            table = [f"Bảng biến thiên cho f({variable})"]
-            table.append("-" * 40)
-            table.append(f"{variable}    | {' | '.join([f'{pt:.2f}' if isinstance(pt, (int, float)) else str(pt) for pt in points])}")
-            table.append("-" * 40)
-            
-            # Derivative sign (monotonicity)
-            derivative_signs = []
+            rows = []
             for i in range(len(points) - 1):
-                test_point = (points[i] + points[i+1]) / 2 if points[i] != -float('inf') and points[i+1] != float('inf') else points[i] + 1 if points[i] != -float('inf') else points[i+1] - 1
+                interval = f"({points[i]:.2f}, {points[i + 1]:.2f})" if points[i] != -float('inf') and points[i + 1] != float('inf') else "(-∞, ∞)"
+                test_point = (points[i] + points[i + 1]) / 2 if points[i] != -float('inf') and points[i + 1] != float('inf') else points[i] + 1 if points[i] != -float('inf') else points[i + 1] - 1
                 deriv_value = derivative.subs(var, test_point)
                 try:
-                    sign = '+' if deriv_value > 0 else '-' if deriv_value < 0 else '0'
+                    if deriv_value > 0:
+                        sign = '+'
+                        arrow = '↑'
+                        color = '#4CAF50'  # Green
+                        behavior = 'Increasing'
+                    elif deriv_value < 0:
+                        sign = '-'
+                        arrow = '↓'
+                        color = '#F44336'  # Red
+                        behavior = 'Decreasing'
+                    else:
+                        sign = '0'
+                        arrow = '→'
+                        color = '#888888'  # Gray
+                        behavior = 'Constant'
                 except (TypeError, ValueError):
                     sign = 'undefined'
-                derivative_signs.append(sign)
-            table.append(f"f'({variable}) | {' | '.join([' ' * 10 + sign for sign in derivative_signs])}")
-            
-            # Function behavior (increasing/decreasing)
-            behavior = []
-            for sign in derivative_signs:
-                if sign == '+':
-                    behavior.append('↑')
-                elif sign == '-':
-                    behavior.append('↓')
-                else:
-                    behavior.append('-')
-            table.append(f"f({variable})  | {' | '.join([' ' * 10 + b for b in behavior])}")
-            
-            # Function values at critical points
+                    arrow = '?'
+                    color = '#888888'
+                    behavior = 'Undefined'
+                rows.append((interval, sign, arrow, behavior, color))
+
+            # Add critical points and function values
+            crit_rows = []
             if critical_points:
-                values = []
                 for pt in critical_points:
                     try:
                         val = func.subs(var, pt)
-                        values.append(f"{val:.2f}")
+                        crit_rows.append((f"<b>Critical Point: {pt:.2f}</b>", "-", f"f({variable}) = <b>{val:.2f}</b>"))
                     except (ValueError, TypeError):
-                        values.append("undefined")
-                table.append(f"Values | {' | '.join([f'({pt:.2f}, {val})' for pt, val in zip(critical_points, values)])}")
-            
-            return "\n".join(table)
+                        crit_rows.append((f"<b>Critical Point: {pt:.2f}</b>", "-", "undefined"))
+
+            # Generate HTML table
+            html = """
+            <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; font-size:14px;">
+                <tr style="background-color:#f2f2f2;">
+                    <th>Interval</th>
+                    <th>f'(x) Sign</th>
+                    <th>Behavior</th>
+                </tr>
+            """
+            for interval, sign, arrow, behavior, color in rows:
+                html += f'<tr><td>{interval}</td><td style="color:{color}; font-weight:bold;">{sign} {arrow}</td><td style="color:{color};">{behavior}</td></tr>'
+            for crit in crit_rows:
+                html += f'<tr style="background-color:#ffe082;"><td colspan=\"3\">{crit[0]} &nbsp; {crit[2]}</td></tr>'
+            html += "</table>"
+            return html
         except Exception as e:
             return f"Error generating variable table: {str(e)}"
 
