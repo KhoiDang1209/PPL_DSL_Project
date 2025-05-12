@@ -1,0 +1,10 @@
+Dockerfile
+.dockerignore
+.git
+.mvn
+gradle
+.gradle
+target
+build
+.idea
+HELP.md
