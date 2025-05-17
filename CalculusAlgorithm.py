@@ -2,16 +2,20 @@
 import sympy as sp
 import numpy as np
 from tabulate import tabulate
+
 class CalculusParser:
+    @staticmethod
+    def _format_step(step_number, title, content):
+        """Helper method to format a step with consistent styling"""
+        return f"\nStep {step_number}: {title}\n{content}\n"
+
     @staticmethod
     def _validate_variable(function_str, variable):
         try:
             var = sp.Symbol(variable)
             func = sp.sympify(function_str)
-            if not func.free_symbols:
-                return True
             return var in func.free_symbols
-        except Exception as e:
+        except Exception:
             return False
 
     @staticmethod
@@ -19,11 +23,16 @@ class CalculusParser:
         try:
             if not CalculusParser._validate_variable(function_str, variable):
                 return f"Error: Variable '{variable}' not found in function '{function_str}'"
-            
+
+            steps = []
+            steps.append(CalculusParser._format_step(1, "Input function:", function_str))
+
             var = sp.Symbol(variable)
             func = sp.sympify(function_str)
             derivative = sp.diff(func, var)
-            return derivative
+            steps.append(CalculusParser._format_step(2, "Derivative:", str(derivative)))
+
+            return "\n".join(steps)
         except Exception as e:
             return f"Error computing derivative: {str(e)}"
 
@@ -32,11 +41,16 @@ class CalculusParser:
         try:
             if not CalculusParser._validate_variable(function_str, variable):
                 return f"Error: Variable '{variable}' not found in function '{function_str}'"
-            
+
+            steps = []
+            steps.append(CalculusParser._format_step(1, "Input function:", function_str))
+
             var = sp.Symbol(variable)
             func = sp.sympify(function_str)
             integral = sp.integrate(func, var)
-            return integral
+            steps.append(CalculusParser._format_step(2, "Integral:", str(integral)))
+
+            return "\n".join(steps)
         except Exception as e:
             return f"Error computing integral: {str(e)}"
 
@@ -45,11 +59,27 @@ class CalculusParser:
         try:
             if not CalculusParser._validate_variable(function_str, variable):
                 return f"Error: Variable '{variable}' not found in function '{function_str}'"
-            
+
+            steps = []
+            steps.append(CalculusParser._format_step(1, "Input function:", function_str))
+            steps.append(CalculusParser._format_step(2, "Limit point:", point))
+
             var = sp.Symbol(variable)
             func = sp.sympify(function_str)
-            limit = sp.limit(func, var, float(point))
-            return limit
+            try:
+                point_val = float(point)
+            except ValueError:
+                if point.lower() == 'inf':
+                    point_val = sp.oo
+                elif point.lower() == '-inf':
+                    point_val = -sp.oo
+                else:
+                    return "Error: Invalid limit point"
+
+            limit = sp.limit(func, var, point_val)
+            steps.append(CalculusParser._format_step(3, "Limit:", str(limit)))
+
+            return "\n".join(steps)
         except Exception as e:
             return f"Error computing limit: {str(e)}"
 
@@ -58,22 +88,37 @@ class CalculusParser:
         try:
             if not CalculusParser._validate_variable(function_str, variable):
                 return f"Error: Variable '{variable}' not found in function '{function_str}'"
-            
+
+            steps = []
+            steps.append(CalculusParser._format_step(1, "Input function:", function_str))
+
             var = sp.Symbol(variable)
             func = sp.sympify(function_str)
             derivative = sp.diff(func, var)
+            steps.append(CalculusParser._format_step(2, "First derivative:", str(derivative)))
+
             critical_points = sp.solve(derivative, var)
+            steps.append(CalculusParser._format_step(3, "Critical points:", 
+                "\n".join([f"{variable} = {point}" for point in critical_points])))
+
             second_derivative = sp.diff(derivative, var)
-            extrema = []
+            steps.append(CalculusParser._format_step(4, "Second derivative:", str(second_derivative)))
+
+            extrema_analysis = []
             for point in critical_points:
-                second_deriv_value = second_derivative.subs(var, point)
-                if second_deriv_value > 0:
-                    extrema.append(f"Local minimum at {variable} = {point}")
-                elif second_deriv_value < 0:
-                    extrema.append(f"Local maximum at {variable} = {point}")
-                else:
-                    extrema.append(f"Possible extremum at {variable} = {point} (second derivative test inconclusive)")
-            return "\n".join(extrema) if extrema else "No extrema found"
+                if point.is_real:
+                    second_deriv_value = second_derivative.subs(var, point)
+                    if second_deriv_value > 0:
+                        extrema_analysis.append(f"Local minimum at {variable} = {point}")
+                    elif second_deriv_value < 0:
+                        extrema_analysis.append(f"Local maximum at {variable} = {point}")
+                    else:
+                        extrema_analysis.append(f"Possible inflection point at {variable} = {point}")
+
+            steps.append(CalculusParser._format_step(5, "Extrema analysis:", 
+                "\n".join(extrema_analysis) if extrema_analysis else "No real extrema found"))
+
+            return "\n".join(steps)
         except Exception as e:
             return f"Error finding extrema: {str(e)}"
 
@@ -82,13 +127,21 @@ class CalculusParser:
         try:
             if not CalculusParser._validate_variable(function_str, variable):
                 return f"Error: Variable '{variable}' not found in function '{function_str}'"
-            
+
+            steps = []
+            steps.append(CalculusParser._format_step(1, "Input equation:", function_str))
+
             var = sp.Symbol(variable)
             func = sp.sympify(function_str)
             solutions = sp.solve(func, var)
+            
             if not solutions:
-                return "No solutions found"
-            return "\n".join([f"{variable} = {sol}" for sol in solutions])
+                steps.append(CalculusParser._format_step(2, "Solution:", "No solutions found"))
+            else:
+                steps.append(CalculusParser._format_step(2, "Solutions:", 
+                    "\n".join([f"{variable} = {sol}" for sol in solutions])))
+
+            return "\n".join(steps)
         except Exception as e:
             return f"Error solving equation: {str(e)}"
 
@@ -97,6 +150,9 @@ class CalculusParser:
         try:
             if not CalculusParser._validate_variable(function_str, variable):
                 return f"Error: Variable '{variable}' not found in function '{function_str}'"
+
+            steps = []
+            steps.append(CalculusParser._format_step(1, "Input function:", function_str))
 
             var = sp.Symbol(variable)
             func = sp.sympify(function_str)
@@ -113,57 +169,42 @@ class CalculusParser:
             # Analyze behavior in each interval
             rows = []
             for i in range(len(points) - 1):
-                interval = f"({points[i]:.2f}, {points[i + 1]:.2f})" if points[i] != -float('inf') and points[i + 1] != float('inf') else "(-∞, ∞)"
-                test_point = (points[i] + points[i + 1]) / 2 if points[i] != -float('inf') and points[i + 1] != float('inf') else points[i] + 1 if points[i] != -float('inf') else points[i + 1] - 1
+                interval_start = points[i]
+                interval_end = points[i + 1]
+                
+                # Test point in the middle of the interval
+                if interval_start == -float('inf'):
+                    test_point = interval_end - 1
+                elif interval_end == float('inf'):
+                    test_point = interval_start + 1
+                else:
+                    test_point = (interval_start + interval_end) / 2
+                
+                # Evaluate derivative at test point
                 deriv_value = derivative.subs(var, test_point)
-                try:
-                    if deriv_value > 0:
-                        sign = '+'
-                        arrow = '↑'
-                        color = '#4CAF50'  # Green
-                        behavior = 'Increasing'
-                    elif deriv_value < 0:
-                        sign = '-'
-                        arrow = '↓'
-                        color = '#F44336'  # Red
-                        behavior = 'Decreasing'
-                    else:
-                        sign = '0'
-                        arrow = '→'
-                        color = '#888888'  # Gray
-                        behavior = 'Constant'
-                except (TypeError, ValueError):
-                    sign = 'undefined'
-                    arrow = '?'
-                    color = '#888888'
-                    behavior = 'Undefined'
-                rows.append((interval, sign, arrow, behavior, color))
+                
+                # Determine behavior
+                if deriv_value > 0:
+                    behavior = "Increasing"
+                elif deriv_value < 0:
+                    behavior = "Decreasing"
+                else:
+                    behavior = "Constant"
+                
+                # Format interval
+                if interval_start == -float('inf'):
+                    interval_str = f"(-∞, {interval_end})"
+                elif interval_end == float('inf'):
+                    interval_str = f"({interval_start}, ∞)"
+                else:
+                    interval_str = f"({interval_start}, {interval_end})"
+                
+                rows.append(f"Interval: {interval_str} | Behavior: {behavior}")
 
-            # Add critical points and function values
-            crit_rows = []
-            if critical_points:
-                for pt in critical_points:
-                    try:
-                        val = func.subs(var, pt)
-                        crit_rows.append((f"<b>Critical Point: {pt:.2f}</b>", "-", f"f({variable}) = <b>{val:.2f}</b>"))
-                    except (ValueError, TypeError):
-                        crit_rows.append((f"<b>Critical Point: {pt:.2f}</b>", "-", "undefined"))
+            steps.append(CalculusParser._format_step(2, "Function analysis:", 
+                "\n".join(rows)))
 
-            # Generate HTML table
-            html = """
-            <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; font-size:14px;">
-                <tr style="background-color:#f2f2f2;">
-                    <th>Interval</th>
-                    <th>f'(x) Sign</th>
-                    <th>Behavior</th>
-                </tr>
-            """
-            for interval, sign, arrow, behavior, color in rows:
-                html += f'<tr><td>{interval}</td><td style="color:{color}; font-weight:bold;">{sign} {arrow}</td><td style="color:{color};">{behavior}</td></tr>'
-            for crit in crit_rows:
-                html += f'<tr style="background-color:#ffe082;"><td colspan=\"3\">{crit[0]} &nbsp; {crit[2]}</td></tr>'
-            html += "</table>"
-            return html
+            return "\n".join(steps)
         except Exception as e:
             return f"Error generating variable table: {str(e)}"
 

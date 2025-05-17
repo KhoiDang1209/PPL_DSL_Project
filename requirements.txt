@@ -1,0 +1,5 @@
+PyQt5
+sympy
+numpy
+tabulate
+antlr4-python3-runtime 

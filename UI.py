@@ -7,13 +7,15 @@ from PyQt5.QtGui import QFont, QPalette, QColor
 
 from CalculusAlgorithm import CalculusParser
 from LinearAlgorithm import LinearAlgebraParser
+from math_evaluator import evaluate_expression
 
 
 class MathDSLApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Math DSL Processor")
-        self.setMinimumSize(1440, 512)
+        self.setMinimumSize(1920, 1200)
+        self.resize(1920, 1200)
 
         # Initialize main widget and layout
         self.central_widget = QWidget()
@@ -56,12 +58,48 @@ class MathDSLApp(QMainWindow):
         self.limit_point_group.setObjectName("limit_point_group")
         self.matrix_group.setObjectName("matrix_group")
 
+        # Update stylesheet for no borders, custom arrow, and larger font
         stylesheet = """
         QLineEdit, QTextEdit, QComboBox {
             background-color: white;
             border-radius: 15px;
             border: 1px solid #ccc;
             padding: 5px;
+            font-size: 20px;
+        }
+        QLabel {
+            font-size: 20px;
+        }
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            subcontrol-position: top left;
+            padding-left: 10px;
+            padding-top: 5px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        QComboBox::drop-down {
+            border: none;
+        }
+        QWidget#calculus_group, QWidget#linear_algebra_group {
+            border-radius: 15px;
+            border: none;
+            background-color: white;
+            margin-top: 8px;
+            padding: 10px;
+        }
+        QGroupBox {
+            border: none;
+            background-color: white;
+            margin-top: 0px;
+            padding: 5px;
+        }
+        QGroupBox#function_group, QGroupBox#variable_group, QGroupBox#limit_point_group, QGroupBox#matrix_group, QGroupBox#constants_group {
+            border-radius: 15px;
+            border: none;
+            background-color: white;
+            margin-top: 8px;
+            padding: 10px;
         }
         QFrame#input_frame, QFrame#output_frame {
             background-color: white;
@@ -69,32 +107,20 @@ class MathDSLApp(QMainWindow):
             border: 1px solid #ccc;
             padding: 10px;
         }
-        QGroupBox {
-            border: none;
-            background-color: white;
-            padding: 5px;
-        }
-
-        /* Specific styling for the group boxes */
-        QGroupBox#linear_algebra_group, QGroupBox#constants_group, 
-        QGroupBox#calculus_group, QGroupBox#function_group,
-        QGroupBox#limit_point_group, QGroupBox#matrix_group {
-            border-radius: 15px;
-            border: none;
-            margin-top: 8px;
-            padding: 10px;
-        }
-
-        QComboBox::drop-down {
-            border: none;
-        }
-        QPushButton {
-            border-radius: 10px;
-            border: 1px solid #ccc;
-            padding: 5px;
-        }
         """
         self.setStyleSheet(stylesheet)
+
+        # Add a Unicode arrow to the QComboBox items (workaround for lack of ::after in Qt)
+        self.calculus_operation_combo.setEditable(True)
+        self.calculus_operation_combo.lineEdit().setReadOnly(True)
+        self.calculus_operation_combo.lineEdit().setAlignment(Qt.AlignLeft)
+        self.calculus_operation_combo.lineEdit().setText(self.calculus_operation_combo.currentText() + "  ▼")
+        self.calculus_operation_combo.setEditable(False)
+        self.linear_algebra_operation_combo.setEditable(True)
+        self.linear_algebra_operation_combo.lineEdit().setReadOnly(True)
+        self.linear_algebra_operation_combo.lineEdit().setAlignment(Qt.AlignLeft)
+        self.linear_algebra_operation_combo.lineEdit().setText(self.linear_algebra_operation_combo.currentText() + "  ▼")
+        self.linear_algebra_operation_combo.setEditable(False)
 
     def setup_header(self):
         header_layout = QVBoxLayout()
@@ -144,8 +170,7 @@ class MathDSLApp(QMainWindow):
         operation_type_layout = QHBoxLayout()
         self.calculus_button = QPushButton("Calculus")
         self.linear_algebra_button = QPushButton("Linear Algebra")
-        # Set font size for buttons
-        button_font = QFont("Segoe UI", 12)  # Adjust font size
+        button_font = QFont("Segoe UI", 12)
         self.calculus_button.setFont(button_font)
         self.linear_algebra_button.setFont(button_font)
         self.calculus_button.setStyleSheet("""
@@ -155,7 +180,6 @@ class MathDSLApp(QMainWindow):
             border: none;
             padding: 5px;
         """)
-
         self.linear_algebra_button.setStyleSheet("""
             background-color: #E2E7FF;
             color: black;
@@ -168,21 +192,23 @@ class MathDSLApp(QMainWindow):
         input_layout.addLayout(operation_type_layout)
         input_layout.addSpacing(10)
 
-        # Calculus Operation Selection
-        self.calculus_operation_group = QGroupBox()
+        # Calculus Operation Selection (QWidget instead of QGroupBox)
+        self.calculus_operation_group = QWidget()
+        self.calculus_operation_group.setObjectName("calculus_group")
         calculus_layout = QVBoxLayout(self.calculus_operation_group)
         calculus_label = QLabel("Calculus Operation")
         calculus_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
         self.calculus_operation_combo = QComboBox()
         self.calculus_operation_combo.addItems(
             ["Derivative", "Integral", "Limit", "Extrema", "Solve Equation", "Generate Variable Table"])
-
         calculus_layout.addWidget(calculus_label)
         calculus_layout.addWidget(self.calculus_operation_combo)
         input_layout.addWidget(self.calculus_operation_group)
+        input_layout.addSpacing(10)
 
-        # Linear Algebra Operation Selection
-        self.linear_algebra_operation_group = QGroupBox()
+        # Linear Algebra Operation Selection (QWidget instead of QGroupBox)
+        self.linear_algebra_operation_group = QWidget()
+        self.linear_algebra_operation_group.setObjectName("linear_algebra_group")
         linear_algebra_layout = QVBoxLayout(self.linear_algebra_operation_group)
         linear_algebra_label = QLabel("Linear Algebra Operation")
         linear_algebra_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
@@ -192,82 +218,83 @@ class MathDSLApp(QMainWindow):
             "Solve Linear System", "Eigenvalues and Eigenvectors",
             "Matrices Calculation", "Diagonalize Matrix"
         ])
-
         linear_algebra_layout.addWidget(linear_algebra_label)
         linear_algebra_layout.addWidget(self.linear_algebra_operation_combo)
         input_layout.addWidget(self.linear_algebra_operation_group)
+        input_layout.addSpacing(10)
 
-        # Function Input
+        # Function Label and Group
+        self.function_label = QLabel("Function")
+        self.function_label.setFont(QFont("Segoe UI", 20, QFont.Normal))
+        input_layout.addWidget(self.function_label)
         self.function_group = QGroupBox()
+        self.function_group.setObjectName("function_group")
         function_layout = QVBoxLayout(self.function_group)
-
-        function_label = QLabel("Function")
-        function_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
         self.function_input = QLineEdit()
-        self.function_input.setFixedSize(400, 32)
         self.function_input.setPlaceholderText("Enter function (e.g., x^2 + sin(x))")
-
-        variable_label = QLabel("Variable")
-        variable_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
-        self.variable_input = QLineEdit()
-        self.variable_input.setFixedSize(400, 32)
-        self.variable_input.setPlaceholderText("Enter variable (e.g., x)")
-
-        function_layout.addWidget(function_label)
+        self.function_input.setFixedSize(400, 32)
         function_layout.addWidget(self.function_input)
-        function_layout.addWidget(variable_label)
-        function_layout.addWidget(self.variable_input)
-
         input_layout.addWidget(self.function_group)
+        input_layout.addSpacing(5)
 
-        # Limit Point Input
+        # Variable Label and Group
+        self.variable_label = QLabel("Variable")
+        self.variable_label.setFont(QFont("Segoe UI", 20, QFont.Normal))
+        input_layout.addWidget(self.variable_label)
+        self.variable_group = QGroupBox()
+        self.variable_group.setObjectName("variable_group")
+        variable_layout = QVBoxLayout(self.variable_group)
+        self.variable_input = QLineEdit()
+        self.variable_input.setPlaceholderText("Enter variable (e.g., x)")
+        self.variable_input.setFixedSize(400, 32)
+        variable_layout.addWidget(self.variable_input)
+        input_layout.addWidget(self.variable_group)
+        input_layout.addSpacing(5)
+
+        # Limit Point Label and Group
+        self.limit_point_label = QLabel("Limit Point")
+        self.limit_point_label.setFont(QFont("Segoe UI", 20, QFont.Normal))
+        input_layout.addWidget(self.limit_point_label)
         self.limit_point_group = QGroupBox()
+        self.limit_point_group.setObjectName("limit_point_group")
         limit_layout = QVBoxLayout(self.limit_point_group)
-
-        limit_point_label = QLabel("Limit Point")
-        limit_point_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
         self.limit_point_input = QLineEdit()
-        self.limit_point_input.setFixedSize(400, 32)
         self.limit_point_input.setPlaceholderText("Enter limit point (e.g., 0)")
-
-        limit_layout.addWidget(limit_point_label)
+        self.limit_point_input.setFixedSize(400, 32)
         limit_layout.addWidget(self.limit_point_input)
-
         input_layout.addWidget(self.limit_point_group)
+        input_layout.addSpacing(5)
+        self.limit_point_group.hide()  # Hide by default
 
         # Matrix Input
         self.matrix_group = QGroupBox()
+        self.matrix_group.setObjectName("matrix_group")
         matrix_main_layout = QVBoxLayout(self.matrix_group)
-
         matrix_label = QLabel("Matrix Input")
         matrix_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
         matrix_main_layout.addWidget(matrix_label)
-
-        # Initialize matrix layout
         self.matrix_layout = QVBoxLayout()
         matrix_main_layout.addLayout(self.matrix_layout)
-
         input_layout.addWidget(self.matrix_group)
+        input_layout.addSpacing(5)
 
         # Constants Input for Linear System
         self.constants_group = QGroupBox()
+        self.constants_group.setObjectName("constants_group")
         constants_layout = QVBoxLayout(self.constants_group)
-
         constants_label = QLabel("Constants (b vector)")
         constants_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
         constants_layout.addWidget(constants_label)
-
         self.constants_input_layout = QHBoxLayout()
         constants_layout.addLayout(self.constants_input_layout)
-
         input_layout.addWidget(self.constants_group)
+        input_layout.addSpacing(10)
 
         # Calculate Button
         self.calculate_button = QPushButton("Calculate")
         self.calculate_button.setFont(QFont("Segoe UI", 12))
         input_layout.addWidget(self.calculate_button)
-        # Set font size for combo boxes
-        combo_font = QFont("Segoe UI", 11)  # Font size 11
+        combo_font = QFont("Segoe UI", 11)
         self.calculate_button.setStyleSheet("""
             background-color: #3E3A9C;
             color: white;
@@ -277,7 +304,6 @@ class MathDSLApp(QMainWindow):
         """)
         self.calculus_operation_combo.setFont(combo_font)
         self.linear_algebra_operation_combo.setFont(combo_font)
-        # Add some spacing at the bottom
         input_layout.addStretch()
 
     def connect_signals(self):
@@ -291,10 +317,14 @@ class MathDSLApp(QMainWindow):
     def show_calculus_ui(self):
         self.calculus_operation_group.show()
         self.linear_algebra_operation_group.hide()
+        self.function_label.show()
         self.function_group.show()
+        self.variable_label.show()
+        self.variable_group.show()
+        self.limit_point_label.show()
+        self.limit_point_group.show()
         self.matrix_group.hide()
         self.constants_group.hide()
-
         # Clean up matrix input
         if hasattr(self, 'matrix_input'):
             self.matrix_input.hide()
@@ -302,35 +332,32 @@ class MathDSLApp(QMainWindow):
             self.second_matrix_input.hide()
         if hasattr(self, 'matrix_operation_combo'):
             self.matrix_operation_combo.hide()
-
         self.update_ui_for_calculus_operation()
 
     def show_linear_algebra_ui(self):
         self.calculus_operation_group.hide()
         self.linear_algebra_operation_group.show()
+        self.function_label.hide()
         self.function_group.hide()
+        self.variable_label.hide()
+        self.variable_group.hide()
+        self.limit_point_label.hide()
+        self.limit_point_group.hide()
         self.matrix_group.show()
-
+        self.constants_group.show()
         # Initialize matrix input if it doesn't exist
         if not hasattr(self, 'matrices_layout'):
             self.matrices_layout = QHBoxLayout()
             self.matrix_layout.addLayout(self.matrices_layout)
-
         if not hasattr(self, 'matrix_input'):
             self.matrix_input = QLineEdit()
             self.matrix_input.setPlaceholderText(
                 "Enter matrix rows separated by [], values separated by spaces or commas.\nExample: [[1, 0], [0, 1]]"
             )
-            self.matrix_input.setFixedSize(400, 32)
+            self.matrix_input.setFixedSize(700, 32)
             self.matrices_layout.addWidget(self.matrix_input)
-
-        # Show the matrix input
         self.matrix_input.show()
-
-        # Update UI for the current operation
         self.update_ui_for_linear_algebra_operation()
-
-        # Connect calculate button
         self.calculate_button.clicked.connect(self.calculate)
 
     def setup_output_section(self):
@@ -369,12 +396,14 @@ class MathDSLApp(QMainWindow):
 
     def update_ui_for_calculus_operation(self):
         calculus_operation = self.calculus_operation_combo.currentText()
-
         # Show/hide limit point input for Limit operation
         if calculus_operation == "Limit":
+            self.limit_point_label.show()
             self.limit_point_group.show()
         else:
+            self.limit_point_label.hide()
             self.limit_point_group.hide()
+        # No need for force layout update, as each group is now separate
 
     def update_ui_for_linear_algebra_operation(self):
         linear_algebra_operation = self.linear_algebra_operation_combo.currentText()
@@ -390,7 +419,7 @@ class MathDSLApp(QMainWindow):
             self.matrix_input.setPlaceholderText(
                 "Enter matrix rows separated by [], values separated by spaces or commas.\nExample: [[1, 0], [0, 1]]"
             )
-            self.matrix_input.setFixedSize(400, 32)
+            self.matrix_input.setFixedSize(700, 32)
             self.matrices_layout.addWidget(self.matrix_input)
 
         # Show/hide second matrix input and operation selector based on operation
@@ -408,7 +437,7 @@ class MathDSLApp(QMainWindow):
                 self.second_matrix_input.setPlaceholderText(
                     "Enter second matrix rows separated by [], values separated by spaces or commas.\nExample: [[1, 0], [0, 1]]"
                 )
-                self.second_matrix_input.setFixedSize(400, 32)
+                self.second_matrix_input.setFixedSize(700, 32)
                 self.matrices_layout.addWidget(self.second_matrix_input)
 
             self.matrices_layout.setSpacing(10)  # Add some spacing between elements
@@ -523,27 +552,44 @@ class MathDSLApp(QMainWindow):
         self.constants_input_layout.addWidget(self.constants_input, alignment=Qt.AlignLeft)
 
     def get_matrix_values(self):
-        try:
-            matrix_text = self.matrix_input.text()
-            matrix = eval(matrix_text)
-            if not isinstance(matrix, list) or not all(isinstance(row, list) for row in matrix):
-                raise ValueError("Invalid matrix format")
-            return matrix
-        except Exception as e:
-            QMessageBox.warning(self, "Input Error", "Invalid matrix format. Please enter a valid matrix.")
-            return None
+        # Convert matrix input to string format for math evaluator
+        matrix_values = []
+        for row in self.matrix_inputs:
+            row_values = []
+            for input_field in row:
+                value = input_field.text().strip()
+                if value:
+                    row_values.append(value)
+            if row_values:
+                matrix_values.append(row_values)
+        
+        # Convert to string format that math evaluator can parse
+        matrix_str = "["
+        for i, row in enumerate(matrix_values):
+            matrix_str += "["
+            matrix_str += ",".join(row)
+            matrix_str += "]"
+            if i < len(matrix_values) - 1:
+                matrix_str += ","
+        matrix_str += "]"
+        
+        return matrix_str
 
     def get_constants_values(self):
-        constants = []
-        for input_field in self.constant_inputs:
-            value = input_field.text()
-            try:
-                # Try to convert to float
-                constants.append(float(value) if value else 0)
-            except ValueError:
-                QMessageBox.warning(self, "Input Error", "Invalid constant value. Please enter numeric values only.")
-                return None
-        return constants
+        if not hasattr(self, 'constants_input'):
+            return None
+            
+        constants_str = self.constants_input.text().strip()
+        if not constants_str:
+            return None
+            
+        try:
+            # Split by commas and convert to float
+            constants = [float(x.strip()) for x in constants_str.split(',')]
+            return constants
+        except ValueError:
+            QMessageBox.warning(self, "Input Error", "Invalid constant values. Please enter numeric values separated by commas (e.g., 1, 2, 3)")
+            return None
 
     def calculate(self):
         try:
@@ -556,113 +602,96 @@ class MathDSLApp(QMainWindow):
             self.result_text.setText("")
 
     def calculate_calculus(self):
-        calculus_operation = self.calculus_operation_combo.currentText()
-        function_input = self.function_input.text()
-        variable_input = self.variable_input.text()
-
-        # Validate inputs
-        if not function_input or not variable_input:
-            QMessageBox.warning(self, "Input Error", "Function and variable are required.")
-            return
-
-        result = ""
-        if calculus_operation == "Derivative":
-            result = self.compute_derivative(function_input, variable_input)
-        elif calculus_operation == "Integral":
-            result = self.compute_integral(function_input, variable_input)
-        elif calculus_operation == "Limit":
-            point_input = self.limit_point_input.text()
-            if not point_input:
-                QMessageBox.warning(self, "Input Error", "Limit point is required.")
+        try:
+            function_str = self.function_input.text().strip()
+            variable = self.variable_input.text().strip()
+            
+            # First validate the function using math evaluator
+            try:
+                # Test if the function is valid by evaluating it
+                evaluate_expression(function_str)
+            except Exception as e:
+                QMessageBox.warning(self, "Invalid Function", f"Invalid function expression: {str(e)}")
                 return
-            result = self.compute_limit(function_input, variable_input, point_input)
-        elif calculus_operation == "Extrema":
-            result = self.find_extrema(function_input, variable_input)
-        elif calculus_operation == "Solve Equation":
-            result = self.solve_equation(function_input, variable_input)
-        elif calculus_operation == "Generate Variable Table":
-            result = self.generate_variable_table(function_input, variable_input)
 
-        self.result_text.setText(result)
+            operation = self.calculus_operation_combo.currentText()
+            
+            if operation == "Derivative":
+                result = self.compute_derivative(function_str, variable)
+            elif operation == "Integral":
+                result = self.compute_integral(function_str, variable)
+            elif operation == "Limit":
+                point = self.limit_point_input.text().strip()
+                result = self.compute_limit(function_str, variable, point)
+            elif operation == "Extrema":
+                result = self.find_extrema(function_str, variable)
+            elif operation == "Solve Equation":
+                result = self.solve_equation(function_str, variable)
+            elif operation == "Generate Variable Table":
+                result = self.generate_variable_table(function_str, variable)
+            
+            self.result_text.setText(str(result))
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"An error occurred: {str(e)}")
 
     def calculate_linear_algebra(self):
-        linear_algebra_operation = self.linear_algebra_operation_combo.currentText()
-
-        # Get matrix values
-        matrix = self.get_matrix_values()
-        if matrix is None:
-            return
-
-        result = ""
-        if linear_algebra_operation == "Solve Linear System":
-            # Get constants values
-            constants = self.get_constants_values()
-            if constants is None:
-                return
-
-            # Check dimensions
-            if len(matrix) != len(constants):
-                QMessageBox.warning(self, "Input Error",
-                                    "The number of rows in the matrix must match the number of constants.")
-                return
-
-            result = self.solve_linear_system(matrix, constants)
-        elif linear_algebra_operation == "Determinant":
-            # Check if matrix is square
-            rows = len(matrix)
-            for row in matrix:
-                if len(row) != rows:
-                    QMessageBox.warning(self, "Input Error", "Matrix must be square for determinant calculation.")
-                    return
-            result = self.compute_determinant(matrix)
-        elif linear_algebra_operation == "Inverse":
-            # Check if matrix is square
-            rows = len(matrix)
-            for row in matrix:
-                if len(row) != rows:
-                    QMessageBox.warning(self, "Input Error", "Matrix must be square for inverse calculation.")
-                    return
-            result = self.compute_inverse(matrix)
-        elif linear_algebra_operation == "Eigenvalues and Eigenvectors":
-            # Check if matrix is square
-            rows = len(matrix)
-            for row in matrix:
-                if len(row) != rows:
-                    QMessageBox.warning(self, "Input Error",
-                                        "Matrix must be square for eigenvalue/eigenvector calculation.")
-                    return
-            result = self.compute_eigenvalues_vectors(matrix)
-        elif linear_algebra_operation == "Matrices Calculation":
-            # Get second matrix values
-            second_matrix_text = self.second_matrix_input.text()
+        try:
+            operation = self.linear_algebra_operation_combo.currentText()
+            matrix_str = self.matrix_input.text().strip()
+            print(f"Matrix input from UI: '{matrix_str}'")  # Debug print
+            matrix = None
+            matrix_parse_error = None
             try:
-                second_matrix = eval(second_matrix_text)
-                if not isinstance(second_matrix, list) or not all(isinstance(row, list) for row in second_matrix):
-                    raise ValueError("Invalid matrix format")
+                matrix = evaluate_expression(matrix_str)
             except Exception as e:
-                QMessageBox.warning(self, "Input Error", "Invalid second matrix format. Please enter a valid matrix.")
-                return
+                matrix_parse_error = str(e)
+                QMessageBox.warning(self, "Matrix Parse Warning", f"Matrix input had a parse error: {str(e)}\nAttempting to process anyway.")
+                # Optionally, try to salvage or fallback here
+                # For now, just continue with matrix=None
+            result = None  # Initialize result
 
-            operation = self.matrix_operation_combo.currentText()
-            if operation == '+':
-                result = self.add_matrices(matrix, second_matrix)
-            elif operation == '-':
-                result = self.subtract_matrices(matrix, second_matrix)
-            elif operation == '*':
-                result = self.multiply_matrices(matrix, second_matrix)
-            elif operation == '/':
-                result = self.divide_matrices(matrix, second_matrix)
-        elif linear_algebra_operation == "Diagonalize Matrix":
-            # Check if matrix is square
-            rows = len(matrix)
-            for row in matrix:
-                if len(row) != rows:
-                    QMessageBox.warning(self, "Input Error",
-                                        "Matrix must be square for diagonalization.")
-                    return
-            result = self.diagonalize_matrix(matrix)
+            if matrix is not None:
+                if operation == "Inverse":
+                    result = self.compute_inverse(matrix)
+                elif operation == "Determinant":
+                    result = self.compute_determinant(matrix)
+                elif operation == "Solve Linear System":
+                    constants = self.get_constants_values()
+                    result = self.solve_linear_system(matrix, constants)
+                elif operation == "Eigenvalues and Eigenvectors":
+                    result = self.compute_eigenvalues_vectors(matrix)
+                elif operation == "Matrices Calculation":
+                    matrix2_str = self.get_second_matrix_values()
+                    try:
+                        matrix2 = evaluate_expression(matrix2_str)
+                    except Exception as e:
+                        QMessageBox.warning(self, "Invalid Matrix", f"Invalid second matrix expression: {str(e)}")
+                        return
+                    operation_type = self.matrix_operation_combo.currentText()
+                    if operation_type == '+':
+                        result = self.add_matrices(matrix, matrix2)
+                    elif operation_type == '-':
+                        result = self.subtract_matrices(matrix, matrix2)
+                    elif operation_type == '*':
+                        result = self.multiply_matrices(matrix, matrix2)
+                    elif operation_type == '/':
+                        result = self.divide_matrices(matrix, matrix2)
+                elif operation == "Diagonalize Matrix":
+                    result = self.diagonalize_matrix(matrix)
+            else:
+                result = "Matrix input could not be parsed. Please check your input."
 
-        self.result_text.setText(result)
+            if result is not None:
+                if matrix_parse_error:
+                    self.result_text.setText(f"[Warning: {matrix_parse_error}]\n{str(result)}")
+                else:
+                    self.result_text.setText(str(result))
+            else:
+                self.result_text.setText("No result (operation not recognized or failed).")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"An error occurred: {str(e)}")
 
     def compute_derivative(self, func, variable):
         return CalculusParser.compute_derivative(func, variable)
@@ -708,6 +737,13 @@ class MathDSLApp(QMainWindow):
 
     def diagonalize_matrix(self, matrix):
         return LinearAlgebraParser.diagonalize_matrix(matrix)
+
+    def get_second_matrix_values(self):
+        if hasattr(self, 'second_matrix_input'):
+            matrix_str = self.second_matrix_input.text().strip()
+            print(f"Second matrix input from UI: '{matrix_str}'")  # Debug print
+            return matrix_str
+        return ""
 
 
 def apply_dark_style(app):

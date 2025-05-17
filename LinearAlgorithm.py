@@ -3,6 +3,22 @@ import numpy as np
 
 class LinearAlgebraParser:
     @staticmethod
+    def _format_matrix_output(matrix):
+        """Format matrix output to show 2 decimal places"""
+        if isinstance(matrix, sp.Matrix):
+            # Convert to list of lists
+            matrix_list = matrix.tolist()
+            # Format each element to 2 decimal places
+            formatted_rows = []
+            for row in matrix_list:
+                formatted_row = [f"{x:.2f}" for x in row]
+                formatted_rows.append(formatted_row)
+            # Convert back to string representation
+            rows_str = [f"[{', '.join(row)}]" for row in formatted_rows]
+            return f"Matrix([{', '.join(rows_str)}])"
+        return str(matrix)
+
+    @staticmethod
     def _validate_matrix(matrix):
         try:
             if not matrix or not isinstance(matrix, list):
@@ -22,6 +38,11 @@ class LinearAlgebraParser:
             return None
 
     @staticmethod
+    def _format_step(step_number, title, content):
+        """Helper method to format a step with consistent styling"""
+        return f"\nStep {step_number}: {title}\n{content}\n"
+
+    @staticmethod
     def solve_linear_system(coefficients, constants):
         try:
             if not LinearAlgebraParser._validate_matrix(coefficients):
@@ -36,29 +57,33 @@ class LinearAlgebraParser:
             if A is None or b is None:
                 return "Error: Invalid matrix or vector input"
 
+            steps = []
             augmented = A.row_join(b)
-            steps = ["Step 1: Form augmented matrix [A|b]:"]
-            steps.append(str(augmented))
+            steps.append(LinearAlgebraParser._format_step(1, "Form augmented matrix [A|b]:", 
+                LinearAlgebraParser._format_matrix_output(augmented)))
 
             rref, pivots = augmented.rref()
-            steps.append("Step 2: Reduced row echelon form:")
-            steps.append(str(rref))
+            steps.append(LinearAlgebraParser._format_step(2, "Reduced row echelon form:", 
+                LinearAlgebraParser._format_matrix_output(rref)))
 
             rank_A = A.rank()
             rank_augmented = augmented.rank()
             n_vars = A.cols
 
             if rank_A < rank_augmented:
-                steps.append("Step 3: No solution (inconsistent system)")
-                return "\n".join(steps)
+                steps.append(LinearAlgebraParser._format_step(3, "Analysis:", 
+                    "No solution (inconsistent system)"))
             elif rank_A == rank_augmented < n_vars:
-                steps.append("Step 3: Infinitely many solutions (free variables exist)")
+                steps.append(LinearAlgebraParser._format_step(3, "Analysis:", 
+                    "Infinitely many solutions (free variables exist)"))
                 solution = sp.linsolve((A, b))
-                steps.append(f"Solution: {solution}")
+                steps.append(LinearAlgebraParser._format_step(4, "Solution:", str(solution)))
             else:
-                steps.append("Step 3: Unique solution")
+                steps.append(LinearAlgebraParser._format_step(3, "Analysis:", 
+                    "Unique solution"))
                 solution = A.LUsolve(b)
-                steps.append(f"Solution: {solution}")
+                steps.append(LinearAlgebraParser._format_step(4, "Solution:", 
+                    LinearAlgebraParser._format_matrix_output(solution)))
 
             return "\n".join(steps)
         except Exception as e:
@@ -76,12 +101,13 @@ class LinearAlgebraParser:
             if A is None:
                 return "Error: Invalid matrix input"
 
-            steps = ["Step 1: Input matrix:"]
-            steps.append(str(A))
+            steps = []
+            steps.append(LinearAlgebraParser._format_step(1, "Input matrix:", 
+                LinearAlgebraParser._format_matrix_output(A)))
 
             det = A.det()
-            steps.append("Step 2: Compute determinant:")
-            steps.append(f"Determinant = {det}")
+            steps.append(LinearAlgebraParser._format_step(2, "Determinant:", 
+                f"{det:.2f}"))
 
             return "\n".join(steps)
         except Exception as e:
@@ -99,19 +125,22 @@ class LinearAlgebraParser:
             if A is None:
                 return "Error: Invalid matrix input"
 
-            steps = ["Step 1: Input matrix:"]
-            steps.append(str(A))
+            steps = []
+            steps.append(LinearAlgebraParser._format_step(1, "Input matrix:", 
+                LinearAlgebraParser._format_matrix_output(A)))
 
             det = A.det()
-            steps.append("Step 2: Compute determinant:")
-            steps.append(f"Determinant = {det}")
+            steps.append(LinearAlgebraParser._format_step(2, "Determinant:", 
+                f"{det:.2f}"))
+            
             if det == 0:
-                steps.append("Step 3: Matrix is not invertible (determinant is zero)")
+                steps.append(LinearAlgebraParser._format_step(3, "Analysis:", 
+                    "Matrix is not invertible (determinant is zero)"))
                 return "\n".join(steps)
 
             inverse = A.inv()
-            steps.append("Step 3: Inverse matrix:")
-            steps.append(str(inverse))
+            steps.append(LinearAlgebraParser._format_step(3, "Inverse matrix:", 
+                LinearAlgebraParser._format_matrix_output(inverse)))
 
             return "\n".join(steps)
         except Exception as e:
@@ -129,19 +158,23 @@ class LinearAlgebraParser:
             if A is None:
                 return "Error: Invalid matrix input"
 
-            steps = ["Step 1: Input matrix:"]
-            steps.append(str(A))
+            steps = []
+            steps.append(LinearAlgebraParser._format_step(1, "Input matrix:", 
+                LinearAlgebraParser._format_matrix_output(A)))
 
             eigenvalues = A.eigenvals()
-            steps.append("Step 2: Eigenvalues (with multiplicities):")
-            steps.append(str(eigenvalues))
+            steps.append(LinearAlgebraParser._format_step(2, "Eigenvalues (with multiplicities):", 
+                str(eigenvalues)))
 
             eigenvectors = A.eigenvects()
-            steps.append("Step 3: Eigenvectors:")
+            eigenvector_text = []
             for eigenvalue, multiplicity, vectors in eigenvectors:
-                steps.append(f"Eigenvalue {eigenvalue} (multiplicity {multiplicity}):")
+                eigenvector_text.append(f"Eigenvalue {eigenvalue:.2f} (multiplicity {multiplicity}):")
                 for vec in vectors:
-                    steps.append(f"Eigenvector: {vec}")
+                    eigenvector_text.append(f"Eigenvector: {LinearAlgebraParser._format_matrix_output(vec)}")
+            
+            steps.append(LinearAlgebraParser._format_step(3, "Eigenvectors:", 
+                "\n".join(eigenvector_text)))
 
             return "\n".join(steps)
         except Exception as e:
@@ -160,13 +193,13 @@ class LinearAlgebraParser:
             if A is None or B is None:
                 return "Error: Invalid matrix input"
 
-            steps = ["Step 1: Input matrices:"]
-            steps.append(f"Matrix A:\n{A}")
-            steps.append(f"Matrix B:\n{B}")
+            steps = []
+            steps.append(LinearAlgebraParser._format_step(1, "Input matrices:", 
+                f"Matrix A:\n{LinearAlgebraParser._format_matrix_output(A)}\n\nMatrix B:\n{LinearAlgebraParser._format_matrix_output(B)}"))
 
             result = A + B
-            steps.append("Step 2: Add matrices:")
-            steps.append(f"Result:\n{result}")
+            steps.append(LinearAlgebraParser._format_step(2, "Result:", 
+                LinearAlgebraParser._format_matrix_output(result)))
 
             return "\n".join(steps)
         except Exception as e:
@@ -185,13 +218,13 @@ class LinearAlgebraParser:
             if A is None or B is None:
                 return "Error: Invalid matrix input"
 
-            steps = ["Step 1: Input matrices:"]
-            steps.append(f"Matrix A:\n{A}")
-            steps.append(f"Matrix B:\n{B}")
+            steps = []
+            steps.append(LinearAlgebraParser._format_step(1, "Input matrices:", 
+                f"Matrix A:\n{LinearAlgebraParser._format_matrix_output(A)}\n\nMatrix B:\n{LinearAlgebraParser._format_matrix_output(B)}"))
 
             result = A - B
-            steps.append("Step 2: Subtract matrices:")
-            steps.append(f"Result:\n{result}")
+            steps.append(LinearAlgebraParser._format_step(2, "Result:", 
+                LinearAlgebraParser._format_matrix_output(result)))
 
             return "\n".join(steps)
         except Exception as e:
@@ -210,13 +243,13 @@ class LinearAlgebraParser:
             if A is None or B is None:
                 return "Error: Invalid matrix input"
 
-            steps = ["Step 1: Input matrices:"]
-            steps.append(f"Matrix A:\n{A}")
-            steps.append(f"Matrix B:\n{B}")
+            steps = []
+            steps.append(LinearAlgebraParser._format_step(1, "Input matrices:", 
+                f"Matrix A:\n{LinearAlgebraParser._format_matrix_output(A)}\n\nMatrix B:\n{LinearAlgebraParser._format_matrix_output(B)}"))
 
             result = A * B
-            steps.append("Step 2: Multiply matrices:")
-            steps.append(f"Result:\n{result}")
+            steps.append(LinearAlgebraParser._format_step(2, "Result:", 
+                LinearAlgebraParser._format_matrix_output(result)))
 
             return "\n".join(steps)
         except Exception as e:
@@ -237,24 +270,26 @@ class LinearAlgebraParser:
             if A is None or B is None:
                 return "Error: Invalid matrix input"
 
-            steps = ["Step 1: Input matrices:"]
-            steps.append(f"Matrix A:\n{A}")
-            steps.append(f"Matrix B:\n{B}")
+            steps = []
+            steps.append(LinearAlgebraParser._format_step(1, "Input matrices:", 
+                f"Matrix A:\n{LinearAlgebraParser._format_matrix_output(A)}\n\nMatrix B:\n{LinearAlgebraParser._format_matrix_output(B)}"))
 
             det = B.det()
-            steps.append("Step 2: Compute determinant of B:")
-            steps.append(f"Determinant = {det}")
+            steps.append(LinearAlgebraParser._format_step(2, "Determinant of B:", 
+                f"{det:.2f}"))
+            
             if det == 0:
-                steps.append("Step 3: Second matrix is not invertible (determinant is zero)")
+                steps.append(LinearAlgebraParser._format_step(3, "Analysis:", 
+                    "Second matrix is not invertible (determinant is zero)"))
                 return "\n".join(steps)
 
             B_inv = B.inv()
-            steps.append("Step 3: Compute inverse of B:")
-            steps.append(f"Inverse of B:\n{B_inv}")
+            steps.append(LinearAlgebraParser._format_step(3, "Inverse of B:", 
+                LinearAlgebraParser._format_matrix_output(B_inv)))
 
             result = A * B_inv
-            steps.append("Step 4: Multiply A by inverse of B:")
-            steps.append(f"Result:\n{result}")
+            steps.append(LinearAlgebraParser._format_step(4, "Result (A * B^(-1)):", 
+                LinearAlgebraParser._format_matrix_output(result)))
 
             return "\n".join(steps)
         except Exception as e:
@@ -262,7 +297,6 @@ class LinearAlgebraParser:
 
     @staticmethod
     def diagonalize_matrix(matrix):
-
         try:
             if not LinearAlgebraParser._validate_matrix(matrix):
                 return "Error: Invalid matrix"
@@ -273,19 +307,21 @@ class LinearAlgebraParser:
             if A is None:
                 return "Error: Invalid matrix input"
 
-            steps = ["Step 1: Input matrix:"]
-            steps.append(str(A))
+            steps = []
+            steps.append(LinearAlgebraParser._format_step(1, "Input matrix:", 
+                LinearAlgebraParser._format_matrix_output(A)))
 
             try:
                 P, D = A.diagonalize()
-                steps.append("Step 2: Compute diagonalization:")
-                steps.append(f"Matrix P (eigenvectors):\n{P}")
-                steps.append(f"Diagonal matrix D (eigenvalues):\n{D}")
-                steps.append("Verification: A = P * D * P^(-1)")
-                steps.append(f"P^(-1):\n{P.inv()}")
+                steps.append(LinearAlgebraParser._format_step(2, "Diagonalization:", 
+                    f"Matrix P (eigenvectors):\n{LinearAlgebraParser._format_matrix_output(P)}\n\n" +
+                    f"Diagonal matrix D (eigenvalues):\n{LinearAlgebraParser._format_matrix_output(D)}"))
+                
+                steps.append(LinearAlgebraParser._format_step(3, "Verification (P^(-1)):", 
+                    LinearAlgebraParser._format_matrix_output(P.inv())))
             except sp.MatrixError:
-                steps.append("Step 2: Matrix is not diagonalizable")
-                return "\n".join(steps)
+                steps.append(LinearAlgebraParser._format_step(2, "Analysis:", 
+                    "Matrix is not diagonalizable"))
 
             return "\n".join(steps)
         except Exception as e:
