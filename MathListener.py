@@ -62,5 +62,14 @@ class MathListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by MathParser#constants.
+    def enterConstants(self, ctx:MathParser.ConstantsContext):
+        pass
+
+    # Exit a parse tree produced by MathParser#constants.
+    def exitConstants(self, ctx:MathParser.ConstantsContext):
+        pass
+
+
 
 del MathParser

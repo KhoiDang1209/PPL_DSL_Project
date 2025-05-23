@@ -107,7 +107,8 @@ if __name__ == "__main__":
         "exp(1)",
         "sqrt(16)",
         "log(10)",
-        "[[1,2],[3,4]]"  # Matrix test
+        # "[[1,2],[3,4]]"  # Matrix test
+        "[[(-1),(-2)],[3,(-4)]]" # Matrix with negative numbers test
     ]
     for expr in test_expressions:
         try:

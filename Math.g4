@@ -36,7 +36,7 @@ element: '[' row ']' | NUMBER;
 constants: '[' NUMBER (',' NUMBER)* ']';  // vector of constants
 
 // Tokens
-NUMBER: [0-9]+ ('.' [0-9]+)?;           // e.g: -1, 1, 11, -11.11, etc
+NUMBER: ('-')?[0-9]+ ('.' [0-9]+)?;           // e.g: +-1, +-11, +-11.11, etc
 
 VARIABLE: [a-zA-Z][a-zA-Z0-9]*;         // e.g: a, a1, aA, aA1, etc
 
