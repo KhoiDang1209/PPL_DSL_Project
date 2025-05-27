@@ -66,9 +66,11 @@ class MathDSLApp(QMainWindow):
             border: 1px solid #ccc;
             padding: 5px;
             font-size: 20px;
+            font-family: 'Consolas', 'Courier New', monospace;
         }
         QLabel {
             font-size: 20px;
+            font-family: 'Consolas', 'Courier New', monospace;
         }
         QGroupBox::title {
             subcontrol-origin: margin;
@@ -77,6 +79,7 @@ class MathDSLApp(QMainWindow):
             padding-top: 5px;
             font-size: 20px;
             font-weight: bold;
+            font-family: 'Consolas', 'Courier New', monospace;
         }
         QComboBox::drop-down {
             border: none;
@@ -106,6 +109,22 @@ class MathDSLApp(QMainWindow):
             border-radius: 15px;
             border: 1px solid #ccc;
             padding: 10px;
+        }
+        QTextEdit#result_text {
+            background-color: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 15px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 18px;
+            line-height: 1.5;
+            color: #212529;
+        }
+        QTextEdit#result_text:focus {
+            border: 2px solid #3E3A9C;
+        }
+        QPushButton {
+            font-family: 'Consolas', 'Courier New', monospace;
         }
         """
         self.setStyleSheet(stylesheet)
@@ -384,8 +403,10 @@ class MathDSLApp(QMainWindow):
 
         # Result text area
         self.result_text = QTextEdit()
+        self.result_text.setObjectName("result_text")  # Add object name for styling
         self.result_text.setReadOnly(True)
         self.result_text.setPlaceholderText("Result will be displayed here...")
+        self.result_text.setMinimumHeight(400)  # Set minimum height for better visibility
 
         output_layout.addWidget(self.result_text)
 
