@@ -1,14 +1,30 @@
 from antlr4 import *
+from antlr4.error.ErrorListener import ErrorListener
 from MathLexer import MathLexer
 from MathParser import MathParser
 from MathListener import MathListener
 import math
+
+class MathErrorListener(ErrorListener):
+    def __init__(self):
+        super().__init__()
+        self.errors = []
+        
+    def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
+        self.errors.append(f"line {line}:{column} {msg}")
+        
+    def has_errors(self):
+        return len(self.errors) > 0
+        
+    def get_error_message(self):
+        return "\n".join(self.errors)
 
 class MathEvaluator(MathListener):
     def __init__(self):
         self.stack = []
         self.current_matrix = None
         self.current_row = None
+        self.matrix_dimensions = None  # Store matrix dimensions for validation
 
     def exitNUMBER(self, ctx):
         self.stack.append(float(ctx.getText()))
@@ -60,11 +76,22 @@ class MathEvaluator(MathListener):
     # Matrix handling
     def enterMatrix(self, ctx):
         self.current_matrix = []
+        self.matrix_dimensions = None
 
     def exitMatrix(self, ctx):
         if self.current_matrix is not None:
+            # Validate matrix dimensions
+            if not self.current_matrix:
+                raise Exception("Empty matrix")
+            
+            # Check if all rows have the same length
+            row_lengths = [len(row) for row in self.current_matrix]
+            if len(set(row_lengths)) != 1:
+                raise Exception(f"Inconsistent matrix dimensions. Row lengths: {row_lengths}")
+            
             self.stack.append(self.current_matrix)
             self.current_matrix = None
+            self.matrix_dimensions = None
 
     def enterRow(self, ctx):
         self.current_row = []
@@ -72,6 +99,12 @@ class MathEvaluator(MathListener):
     def exitRow(self, ctx):
         if self.current_row is not None:
             if self.current_matrix is not None:
+                # Validate row dimensions
+                if self.matrix_dimensions is None:
+                    self.matrix_dimensions = len(self.current_row)
+                elif len(self.current_row) != self.matrix_dimensions:
+                    raise Exception(f"Invalid row length. Expected {self.matrix_dimensions} elements, got {len(self.current_row)}")
+                
                 self.current_matrix.append(self.current_row)
             else:
                 self.stack.append(self.current_row)
@@ -79,25 +112,42 @@ class MathEvaluator(MathListener):
 
     def exitElement(self, ctx):
         if ctx.NUMBER():
-            value = float(ctx.NUMBER().getText())
-            if self.current_row is not None:
-                self.current_row.append(value)
-            else:
-                self.stack.append(value)
+            try:
+                value = float(ctx.NUMBER().getText())
+                if self.current_row is not None:
+                    self.current_row.append(value)
+                else:
+                    self.stack.append(value)
+            except ValueError:
+                raise Exception(f"Invalid number format: {ctx.NUMBER().getText()}")
         elif ctx.row():
             # For nested matrices, the row is already added to current_matrix
             pass
 
 def evaluate_expression(expression):
-    input_stream = InputStream(expression)
-    lexer = MathLexer(input_stream)
-    token_stream = CommonTokenStream(lexer)
-    parser = MathParser(token_stream)
-    tree = parser.program()
-    evaluator = MathEvaluator()
-    walker = ParseTreeWalker()
-    walker.walk(evaluator, tree)
-    return evaluator.stack[0] if evaluator.stack else None
+    try:
+        input_stream = InputStream(expression)
+        lexer = MathLexer(input_stream)
+        token_stream = CommonTokenStream(lexer)
+        parser = MathParser(token_stream)
+        
+        # Add custom error listener
+        error_listener = MathErrorListener()
+        parser.removeErrorListeners()
+        parser.addErrorListener(error_listener)
+        
+        tree = parser.program()
+        
+        # Check for grammar errors
+        if error_listener.has_errors():
+            raise Exception(error_listener.get_error_message())
+            
+        evaluator = MathEvaluator()
+        walker = ParseTreeWalker()
+        walker.walk(evaluator, tree)
+        return evaluator.stack[0] if evaluator.stack else None
+    except Exception as e:
+        raise Exception(f"Grammar Error: {str(e)}")
 
 if __name__ == "__main__":
     test_expressions = [

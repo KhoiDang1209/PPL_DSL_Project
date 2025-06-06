@@ -627,12 +627,22 @@ class MathDSLApp(QMainWindow):
             function_str = self.function_input.text().strip()
             variable = self.variable_input.text().strip()
             
+            if not function_str:
+                self.result_text.setText("Error: Please enter a function")
+                return
+                
+            if not variable:
+                self.result_text.setText("Error: Please enter a variable")
+                return
+            
             # First validate the function using math evaluator
             try:
                 # Test if the function is valid by evaluating it
                 evaluate_expression(function_str)
             except Exception as e:
-                QMessageBox.warning(self, "Invalid Function", f"Invalid function expression: {str(e)}")
+                error_msg = str(e)
+                self.result_text.setText(f"Grammar Error:\n{error_msg}")
+                QMessageBox.warning(self, "Invalid Function", f"Invalid function expression:\n{error_msg}")
                 return
 
             operation = self.calculus_operation_combo.currentText()
@@ -643,6 +653,9 @@ class MathDSLApp(QMainWindow):
                 result = self.compute_integral(function_str, variable)
             elif operation == "Limit":
                 point = self.limit_point_input.text().strip()
+                if not point:
+                    self.result_text.setText("Error: Please enter a limit point")
+                    return
                 result = self.compute_limit(function_str, variable, point)
             elif operation == "Extrema":
                 result = self.find_extrema(function_str, variable)
@@ -654,7 +667,9 @@ class MathDSLApp(QMainWindow):
             self.result_text.setText(str(result))
             
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"An error occurred: {str(e)}")
+            error_msg = str(e)
+            self.result_text.setText(f"Error:\n{error_msg}")
+            QMessageBox.critical(self, "Error", f"An error occurred:\n{error_msg}")
 
     def calculate_linear_algebra(self):
         try:
